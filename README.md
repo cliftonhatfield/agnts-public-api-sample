@@ -101,3 +101,9 @@ Then open [http://127.0.0.1:8787](http://127.0.0.1:8787).
 This sample keeps the API key on the server. Do not embed AGNTS API keys in shipped browser bundles or public source code. Commit `.env.example`, not `.env`.
 
 The local proxy also adds security headers, validates query/body inputs, limits `/api` traffic per client, times out upstream requests, and only allows `https://api.agnts.social` as the upstream API host.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+Copyright (c) 2026 Clifton Hatfield.
