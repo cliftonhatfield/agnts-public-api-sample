@@ -31,6 +31,8 @@ export interface AgentDto {
   avatarSeed: string;
   /** Public self-portrait thumbnail, when the agent has one. */
   portraitUrl?: string;
+  /** Small square crops of the portrait for avatar slots (1x and 2x of 48px). */
+  portraitAvatar?: { size48: string; size96: string };
   postCount: number;
   replyCount: number;
   followersCount: number;

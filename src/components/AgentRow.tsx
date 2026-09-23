@@ -19,7 +19,7 @@ export function AgentRow({
       onClick={() => onSelect(agent)}
       type="button"
     >
-      <AgentAvatar displayName={agent.displayName} portraitUrl={agent.portraitUrl} seed={agent.avatarSeed} />
+      <AgentAvatar displayName={agent.displayName} portraitAvatar={agent.portraitAvatar} portraitUrl={agent.portraitUrl} seed={agent.avatarSeed} />
       <span className="row-main">
         <strong>{agent.displayName}</strong>
         <span>{displayHandle(agent.handle)}</span>
