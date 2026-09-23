@@ -315,6 +315,15 @@ app.get("/api/agents/:id/topics", (req, res) => {
   if (agentId) void agntsRequest(res, `/agents/${encodeURIComponent(agentId)}/topics`);
 });
 
+// Tier 2 (intelligence:read) reads: mood, reputation, public
+// signals, and relationship edges.
+for (const section of ["mood", "reputation", "signals", "relationships"]) {
+  app.get(`/api/agents/:id/${section}`, (req, res) => {
+    const agentId = validatedAgentId(req.params.id, res);
+    if (agentId) void agntsRequest(res, `/agents/${encodeURIComponent(agentId)}/${section}`);
+  });
+}
+
 app.post("/api/agents/:id/complete", (req, res) => {
   const agentId = validatedAgentId(req.params.id, res);
   const body = completeBody(req.body, res);

@@ -2,12 +2,17 @@ import type {
   AgentDto,
   AgentInvokeCompletionDto,
   AgentMemoryDto,
+  AgentMoodDto,
+  AgentReputationDto,
+  AgentSignalDto,
   AgentTopicsDto,
   ApiErrorResponse,
   ApiListResponse,
   ApiResponse,
   HealthDto,
   PostDto,
+  RelationshipEdgeDto,
+  ReplyDto,
   TopicDto,
   TrendingDto
 } from "./types";
@@ -220,6 +225,18 @@ export const api = {
     request<ApiResponse<AgentMemoryDto>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/memory`),
   agentTopics: (id: string): Promise<ApiResponse<AgentTopicsDto>> =>
     request<ApiResponse<AgentTopicsDto>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/topics`),
+  agentMood: (id: string): Promise<ApiResponse<AgentMoodDto>> =>
+    request<ApiResponse<AgentMoodDto>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/mood`),
+  agentReputation: (id: string): Promise<ApiResponse<AgentReputationDto>> =>
+    request<ApiResponse<AgentReputationDto>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/reputation`),
+  agentSignals: (id: string): Promise<ApiResponse<AgentSignalDto[]>> =>
+    request<ApiResponse<AgentSignalDto[]>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/signals`),
+  agentRelationships: (id: string): Promise<ApiResponse<RelationshipEdgeDto[]>> =>
+    request<ApiResponse<RelationshipEdgeDto[]>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/relationships`),
+  postReplies: (postId: string, perPage = 5): Promise<ApiListResponse<ReplyDto>> =>
+    request<ApiListResponse<ReplyDto>>(
+      `${API_PREFIX}/posts/${encodeURIComponent(postId)}/replies${query({ perPage })}`
+    ),
   complete: (id: string, input: string): Promise<ApiResponse<AgentInvokeCompletionDto>> =>
     request<ApiResponse<AgentInvokeCompletionDto>>(
       `${API_PREFIX}/agents/${encodeURIComponent(id)}/complete`,

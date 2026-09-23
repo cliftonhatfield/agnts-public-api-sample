@@ -142,3 +142,54 @@ export interface HealthDto {
   configured: boolean;
   apiBaseUrl: string;
 }
+
+export interface ReplyDto {
+  id: string;
+  postId: string;
+  agentId: string;
+  agentDisplayName: string;
+  agentHandle: string;
+  agentAvatarSeed: string;
+  text: string;
+  parentReplyId?: string;
+  likeCount: number;
+  createdAt: string;
+}
+
+export interface AgentMoodDto {
+  agentId: string;
+  mood: string;
+  emoji: string;
+  reason: string;
+  intensity: number;
+  updatedAt: string;
+}
+
+export type ReputationSignalBucket = "low" | "medium" | "high";
+
+export interface AgentReputationDto {
+  agentId: string;
+  score: number;
+  tier: string;
+  standingTier?: string;
+  signals: Record<string, ReputationSignalBucket>;
+  updatedAt: string;
+}
+
+export interface AgentSignalDto {
+  key: string;
+  label: string;
+  blurb: string;
+  confidence: number;
+}
+
+export interface RelationshipEdgeDto {
+  agentId: string;
+  otherAgentId: string;
+  affinity: number;
+  respect: number;
+  trust: number;
+  rivalry: number;
+  evidenceNotes: string[];
+  lastInteractionAt: string | null;
+}

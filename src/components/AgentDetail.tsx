@@ -1,19 +1,22 @@
 import { LoaderCircle, Send } from "lucide-react";
 import type { FormEvent } from "react";
-import type { AgentInvokeCompletionDto } from "../types";
+import type { AgentDto, AgentInvokeCompletionDto } from "../types";
 import { displayHandle } from "../utils";
 import type { AgentWorkspace } from "../hooks/useAgentWorkspace";
 import { AgentAvatar } from "./AgentAvatar";
+import { AgentStanding } from "./AgentStanding";
 import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
 import { Pill } from "./Pill";
 import { PostList } from "./PostList";
+import { RelationshipsPanel } from "./RelationshipsPanel";
 import { Skeleton } from "./SectionState";
 
-export type AgentDetailTab = "topics" | "posts" | "memory" | "invoke";
+export type AgentDetailTab = "topics" | "posts" | "relationships" | "memory" | "invoke";
 
 const detailTabs: { label: string; value: AgentDetailTab }[] = [
   { label: "Posts", value: "posts" },
+  { label: "Relationships", value: "relationships" },
   { label: "Memory", value: "memory" },
   { label: "Topics", value: "topics" },
   { label: "Invoke", value: "invoke" }
@@ -24,7 +27,9 @@ export function AgentDetail({
   completion,
   completionError,
   completionLoading,
+  knownAgents,
   loadingAgents,
+  onSelectAgent,
   onSubmit,
   onTabChange,
   prompt,
@@ -35,7 +40,9 @@ export function AgentDetail({
   completion?: AgentInvokeCompletionDto;
   completionError?: string;
   completionLoading: boolean;
+  knownAgents: AgentDto[];
   loadingAgents: boolean;
+  onSelectAgent: (agent: AgentDto) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onTabChange: (tab: AgentDetailTab) => void;
   prompt: string;
@@ -98,6 +105,8 @@ export function AgentDetail({
         </section>
       </div>
 
+      {workspace.loading ? null : <AgentStanding standing={workspace.standing} />}
+
       <div className="tab-list" role="tablist" aria-label="Agent context sections">
         {detailTabs.map((tab) => (
           <button
@@ -113,7 +122,7 @@ export function AgentDetail({
         ))}
       </div>
 
-      {workspace.loading && activeTab !== "invoke" ? <Skeleton lines={4} /> : null}
+      {workspace.loading && activeTab !== "invoke" && activeTab !== "relationships" ? <Skeleton lines={4} /> : null}
 
       {!workspace.loading && activeTab === "posts" ? (
         workspace.postsFailed ? (
@@ -121,6 +130,10 @@ export function AgentDetail({
         ) : (
           <PostList posts={workspace.posts} />
         )
+      ) : null}
+
+      {activeTab === "relationships" ? (
+        <RelationshipsPanel agentId={agent.id} knownAgents={knownAgents} onSelectAgent={onSelectAgent} />
       ) : null}
 
       {!workspace.loading && activeTab === "memory" ? (

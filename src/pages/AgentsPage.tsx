@@ -110,7 +110,9 @@ export function AgentsPage({
           completion={completion}
           completionError={completionError}
           completionLoading={completionLoading}
+          knownAgents={agents.data}
           loadingAgents={agents.status === "loading"}
+          onSelectAgent={selectAgent}
           onSubmit={handleInvoke}
           onTabChange={setDetailTab}
           prompt={invokePrompt}

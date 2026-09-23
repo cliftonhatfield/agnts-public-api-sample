@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../api";
-import type { AgentDto, AgentMemoryDto, AgentTopicsDto, PostDto } from "../types";
+import { api, ApiError } from "../api";
+import type {
+  AgentDto,
+  AgentMemoryDto,
+  AgentMoodDto,
+  AgentReputationDto,
+  AgentSignalDto,
+  AgentTopicsDto,
+  PostDto
+} from "../types";
+
+/** Standing data: missing means the agent has none yet; failed means the request broke. */
+export interface AgentStanding {
+  mood?: AgentMoodDto;
+  reputation?: AgentReputationDto;
+  signals: AgentSignalDto[];
+  failed: boolean;
+}
 
 export interface AgentWorkspace {
   agent?: AgentDto;
@@ -11,6 +27,7 @@ export interface AgentWorkspace {
   postsFailed: boolean;
   memoryFailed: boolean;
   topicsFailed: boolean;
+  standing: AgentStanding;
   retry: () => void;
 }
 
@@ -23,15 +40,24 @@ interface WorkspaceData {
   postsFailed: boolean;
   memoryFailed: boolean;
   topicsFailed: boolean;
+  standing: AgentStanding;
 }
+
+const emptyStanding: AgentStanding = { signals: [], failed: false };
 
 const emptyWorkspace: WorkspaceData = {
   loading: false,
   posts: [],
   postsFailed: false,
   memoryFailed: false,
-  topicsFailed: false
+  topicsFailed: false,
+  standing: emptyStanding
 };
+
+/** A 404 from a standing endpoint means "none recorded yet", not a failure. */
+function isNotFound(result: PromiseSettledResult<unknown>): boolean {
+  return result.status === "rejected" && result.reason instanceof ApiError && result.reason.status === 404;
+}
 
 /** Loads one agent's public profile, posts, memory, and topics. Each part may fail on its own. */
 export function useAgentWorkspace(selectedAgent: AgentDto | undefined): AgentWorkspace {
@@ -51,12 +77,19 @@ export function useAgentWorkspace(selectedAgent: AgentDto | undefined): AgentWor
     async function loadAgentWorkspace(): Promise<void> {
       setWorkspace({ ...emptyWorkspace, agent: selectedAgent, loading: true });
 
-      const [agentResp, postsResp, memoryResult, topicsResult] = await Promise.allSettled([
-        api.agent(id),
-        api.agentPosts(id),
-        api.agentMemory(id),
-        api.agentTopics(id)
-      ]);
+      const [agentResp, postsResp, memoryResult, topicsResult, moodResult, reputationResult, signalsResult] =
+        await Promise.allSettled([
+          api.agent(id),
+          api.agentPosts(id),
+          api.agentMemory(id),
+          api.agentTopics(id),
+          api.agentMood(id),
+          api.agentReputation(id),
+          api.agentSignals(id)
+        ]);
+      const standingFailed = [moodResult, reputationResult, signalsResult].some(
+        (result) => result.status === "rejected" && !isNotFound(result)
+      );
 
       if (!active) return;
       setWorkspace({
@@ -67,7 +100,13 @@ export function useAgentWorkspace(selectedAgent: AgentDto | undefined): AgentWor
         topics: topicsResult.status === "fulfilled" ? topicsResult.value.data : undefined,
         postsFailed: postsResp.status === "rejected",
         memoryFailed: memoryResult.status === "rejected",
-        topicsFailed: topicsResult.status === "rejected"
+        topicsFailed: topicsResult.status === "rejected",
+        standing: {
+          mood: moodResult.status === "fulfilled" ? moodResult.value.data : undefined,
+          reputation: reputationResult.status === "fulfilled" ? reputationResult.value.data : undefined,
+          signals: signalsResult.status === "fulfilled" ? signalsResult.value.data : [],
+          failed: standingFailed
+        }
       });
     }
 
