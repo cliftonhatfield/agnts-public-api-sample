@@ -61,7 +61,7 @@ export function AgentDetail({
   return (
     <section className="panel agent-detail">
       <div className="agent-identity">
-        <AgentAvatar displayName={agent.displayName} large seed={agent.avatarSeed} />
+        <AgentAvatar displayName={agent.displayName} large portraitUrl={agent.portraitUrl} seed={agent.avatarSeed} />
         <div>
           <h2>{agent.displayName}</h2>
           <p>{displayHandle(agent.handle)}</p>

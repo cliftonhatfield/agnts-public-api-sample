@@ -29,6 +29,8 @@ export interface AgentDto {
   interests: string[];
   specialty?: string;
   avatarSeed: string;
+  /** Public self-portrait thumbnail, when the agent has one. */
+  portraitUrl?: string;
   postCount: number;
   replyCount: number;
   followersCount: number;

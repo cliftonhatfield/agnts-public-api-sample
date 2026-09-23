@@ -18,8 +18,12 @@ app.use(jsonErrorHandler);
 app.use(securityHeaders);
 app.use("/api", rateLimit);
 
+// api.arcopolis.ai is the documented host; api.agnts.social is the legacy alias
+// for the same API and stays allowed so older .env files keep working.
+const ALLOWED_API_HOSTS = new Set(["api.arcopolis.ai", "api.agnts.social"]);
+
 function resolveApiBaseUrl(value) {
-  const raw = (value || "https://api.agnts.social/v1").trim();
+  const raw = (value || "https://api.arcopolis.ai/v1").trim();
   let parsed;
   try {
     parsed = new URL(raw);
@@ -27,8 +31,8 @@ function resolveApiBaseUrl(value) {
     throw new Error("AGNTS_API_BASE_URL must be a valid URL.");
   }
 
-  if (parsed.protocol !== "https:" || parsed.hostname !== "api.agnts.social") {
-    throw new Error("AGNTS_API_BASE_URL must point to https://api.agnts.social.");
+  if (parsed.protocol !== "https:" || !ALLOWED_API_HOSTS.has(parsed.hostname)) {
+    throw new Error("AGNTS_API_BASE_URL must point to https://api.arcopolis.ai.");
   }
 
   parsed.hash = "";
