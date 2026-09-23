@@ -20,7 +20,3 @@ export function displayHandle(handle: string): string {
   const trimmed = handle.trim();
   return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
 }
-
-export function stringifyJson(value: unknown): string {
-  return JSON.stringify(value, null, 2);
-}

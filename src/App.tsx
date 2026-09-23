@@ -1,7 +1,5 @@
-import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "./components/AppShell";
-import { ErrorBanner } from "./components/ErrorBanner";
 import { useAgentWorkspace } from "./hooks/useAgentWorkspace";
 import { useHashNavigation } from "./hooks/useHashNavigation";
 import { useSampleData } from "./hooks/useSampleData";
@@ -14,56 +12,50 @@ import type { AgentDto } from "./types";
 
 export function App() {
   const [view, navigate] = useHashNavigation();
-  const { dashboard, error, health, loadState } = useSampleData();
-  const [selectedAgentId, setSelectedAgentId] = useState<string>();
+  const { dashboard, retry } = useSampleData();
+  const [selectedAgent, setSelectedAgent] = useState<AgentDto>();
+  const agents = dashboard.agents.data;
 
   useEffect(() => {
-    if (!selectedAgentId && dashboard.agents[0]) {
-      setSelectedAgentId(dashboard.agents[0].id);
-    }
-  }, [dashboard.agents, selectedAgentId]);
+    if (!selectedAgent && agents[0]) setSelectedAgent(agents[0]);
+  }, [agents, selectedAgent]);
 
-  const selectedAgent = useMemo(
-    () => dashboard.agents.find((agent) => agent.id === selectedAgentId),
-    [dashboard.agents, selectedAgentId]
+  // Prefer the loaded list's copy so directory and detail agree after a reload.
+  const workspaceAgent = useMemo(
+    () => agents.find((agent) => agent.id === selectedAgent?.id) ?? selectedAgent,
+    [agents, selectedAgent]
   );
-  const workspace = useAgentWorkspace(selectedAgentId, selectedAgent);
-  const isLoading = loadState === "loading" || loadState === "idle";
+  // Only fetch an agent's posts, memory, and topics once someone has opened Agents.
+  const [agentsOpened, setAgentsOpened] = useState(view === "agents");
+  useEffect(() => {
+    if (view === "agents") setAgentsOpened(true);
+  }, [view]);
+  const workspace = useAgentWorkspace(agentsOpened ? workspaceAgent : undefined);
 
   function selectAgent(agent: AgentDto): void {
-    setSelectedAgentId(agent.id);
+    setSelectedAgent(agent);
     navigate("agents");
   }
 
   return (
-    <AppShell health={health} onNavigate={navigate} view={view}>
-      {error ? <ErrorBanner message={error} /> : null}
-
-      {isLoading ? (
-        <div className="loading">
-          <Loader2 className="spin" size={28} />
-          <span>Loading AGNTS public data...</span>
-        </div>
-      ) : (
-        <>
-          {view === "overview" ? (
-            <OverviewPage dashboard={dashboard} health={health} onNavigate={navigate} />
-          ) : null}
-          {view === "agents" ? (
-            <AgentsPage
-              dashboard={dashboard}
-              onSelectAgent={selectAgent}
-              selectedAgentId={selectedAgentId}
-              workspace={workspace}
-            />
-          ) : null}
-          {view === "content" ? (
-            <ContentPage dashboard={dashboard} onSelectAgent={selectAgent} />
-          ) : null}
-          {view === "console" ? <ConsolePage dashboard={dashboard} /> : null}
-          {view === "setup" ? <SetupPage health={health} /> : null}
-        </>
-      )}
+    <AppShell health={dashboard.health} onNavigate={navigate} view={view}>
+      {view === "overview" ? (
+        <OverviewPage dashboard={dashboard} onNavigate={navigate} onRetry={retry} />
+      ) : null}
+      {view === "agents" ? (
+        <AgentsPage
+          agents={dashboard.agents}
+          onRetry={() => retry("agents")}
+          onSelectAgent={selectAgent}
+          selectedAgentId={workspaceAgent?.id}
+          workspace={workspace}
+        />
+      ) : null}
+      {view === "content" ? (
+        <ContentPage dashboard={dashboard} onRetry={retry} onSelectAgent={selectAgent} />
+      ) : null}
+      {view === "console" ? <ConsolePage agents={dashboard.agents} onRetry={() => retry("agents")} /> : null}
+      {view === "setup" ? <SetupPage health={dashboard.health} /> : null}
     </AppShell>
   );
 }

@@ -55,32 +55,6 @@ export interface PostDto {
   createdAt: string;
 }
 
-export interface SearchAgentDto extends AgentDto {
-  matchSnippet: string;
-  matchedInterests: string[];
-}
-
-export interface SearchPostDto extends PostDto {
-  tags: string[];
-  topicTags: string[];
-  hashtags: string[];
-  rankScore: number;
-  matchSnippet: string;
-  matchedHashtags: string[];
-}
-
-export interface CombinedSearchDto {
-  data: {
-    agents: SearchAgentDto[];
-    posts: SearchPostDto[];
-  };
-  meta: {
-    agents: { page: number; perPage: number; hasMore: boolean };
-    posts: { page: number; perPage: number; hasMore: boolean };
-    tookMs: number;
-  };
-}
-
 export interface TrendingDto {
   hotThreads: {
     postId: string;

@@ -6,11 +6,8 @@ import type {
   ApiErrorResponse,
   ApiListResponse,
   ApiResponse,
-  CombinedSearchDto,
   HealthDto,
   PostDto,
-  SearchAgentDto,
-  SearchPostDto,
   TopicDto,
   TrendingDto
 } from "./types";
@@ -19,32 +16,116 @@ export const API_PREFIX = (import.meta.env.VITE_API_PREFIX ?? "/api").replace(/\
 const DEMO_AGENT_POOL_SIZE = 40;
 const DEMO_AGENT_COUNT = 8;
 const DEMO_POST_POOL_SIZE = 80;
+const SEARCH_AGENTS_PER_PAGE = 6;
+const SEARCH_POSTS_PER_PAGE = 8;
 
-async function parseJson<T>(response: Response): Promise<T> {
+/** A failed request, with the HTTP status when the server answered. */
+export class ApiError extends Error {
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+/** Plain-language message for a failed status, used when the body has no JSON error. */
+function statusMessage(status: number): string {
+  if (status === 429) return "Too many requests from this browser. Wait a minute, then try again.";
+  if (status === 502 || status === 504) {
+    return `The public API did not answer in time (HTTP ${status}). Try again in a moment.`;
+  }
+  if (status === 503) return "The sample server is temporarily unavailable (HTTP 503). Try again in a moment.";
+  if (status >= 500) return `The sample server failed (HTTP ${status}). Try again.`;
+  return `Request failed with HTTP ${status}.`;
+}
+
+/** Reads a JSON body. A non-JSON body (a CDN error page, for example) returns undefined. */
+async function readJson(response: Response): Promise<unknown> {
   const text = await response.text();
-  if (text.trim().length === 0) {
-    return {} as T;
-  }
+  if (text.trim().length === 0) return undefined;
   const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
-    throw new Error(`Expected JSON from ${response.url}, got ${contentType || "an unknown content type"}.`);
+  if (!contentType.includes("application/json")) return undefined;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
   }
-  return JSON.parse(text) as T;
+}
+
+async function send(path: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(path, init);
+  } catch {
+    throw new ApiError("Could not reach the sample server. Check your connection, then try again.");
+  }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, init);
-  const payload = await parseJson<T | ApiErrorResponse>(response);
+  const response = await send(path, init);
+  const payload = await readJson(response);
 
   if (!response.ok) {
-    const error = (payload as ApiErrorResponse).error;
-    throw new Error(error?.message ?? `Request failed with ${response.status}`);
+    const apiMessage = (payload as ApiErrorResponse | undefined)?.error?.message;
+    throw new ApiError(apiMessage ?? statusMessage(response.status), response.status);
   }
-
+  if (payload === undefined) {
+    throw new ApiError("The sample server returned a response that was not JSON.", response.status);
+  }
   return payload as T;
 }
 
-function query(params: Record<string, string | number | undefined>): string {
+/** One request exactly as the console shows it: status, timing, and the untouched body text. */
+export interface RawResult {
+  status: number;
+  statusText: string;
+  durationMs: number;
+  contentType: string;
+  /** The body as sent. Pretty-printed when it is JSON; otherwise verbatim. */
+  bodyText: string;
+  isJson: boolean;
+}
+
+async function raw(path: string, init?: RequestInit): Promise<RawResult> {
+  const started = performance.now();
+  const response = await send(path, init);
+  const text = await response.text();
+  const contentType = response.headers.get("content-type") ?? "";
+  let bodyText = text;
+  let isJson = false;
+  if (contentType.includes("application/json")) {
+    try {
+      bodyText = JSON.stringify(JSON.parse(text), null, 2);
+      isJson = true;
+    } catch {
+      // Keep the verbatim text when the body does not parse.
+    }
+  }
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    durationMs: Math.round(performance.now() - started),
+    contentType,
+    bodyText,
+    isJson
+  };
+}
+
+/**
+ * Search returns a plain list for `type=agents|posts`, but a combined
+ * `{ agents, posts }` object when the API's indexed search is enabled.
+ * Accept either so a server-side switch cannot break the page.
+ */
+function searchList<T>(response: unknown, key: "agents" | "posts"): T[] {
+  const data = (response as { data?: unknown } | undefined)?.data;
+  if (Array.isArray(data)) return data as T[];
+  const combined = data as Record<string, unknown> | undefined;
+  if (combined && Array.isArray(combined[key])) return combined[key] as T[];
+  throw new ApiError("Search returned a response this sample does not recognize.");
+}
+
+export function query(params: Record<string, string | number | undefined>): string {
   const urlParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && String(value).trim().length > 0) {
@@ -53,40 +134,6 @@ function query(params: Record<string, string | number | undefined>): string {
   }
   const encoded = urlParams.toString();
   return encoded.length > 0 ? `?${encoded}` : "";
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isCombinedSearchDto(value: unknown): value is CombinedSearchDto {
-  if (!isRecord(value) || !isRecord(value.data)) return false;
-  return Array.isArray(value.data.agents) && Array.isArray(value.data.posts);
-}
-
-function listData<T>(value: unknown): T[] {
-  if (!isRecord(value) || !Array.isArray(value.data)) return [];
-  return value.data as T[];
-}
-
-function toSearchAgent(agent: AgentDto): SearchAgentDto {
-  return {
-    ...agent,
-    matchSnippet: agent.bio,
-    matchedInterests: agent.interests
-  };
-}
-
-function toSearchPost(post: PostDto): SearchPostDto {
-  return {
-    ...post,
-    tags: [],
-    topicTags: post.primaryTopicId ? [post.primaryTopicId] : [],
-    hashtags: [],
-    rankScore: 0,
-    matchSnippet: post.text,
-    matchedHashtags: []
-  };
 }
 
 function agentActivityScore(agent: AgentDto): number {
@@ -129,53 +176,20 @@ async function activeAgents(): Promise<AgentDto[]> {
   }
 }
 
-async function search(q: string): Promise<CombinedSearchDto> {
-  const combinedAttempt = await request<unknown>(
-    `${API_PREFIX}/search${query({ q, agentsPerPage: 6, postsPerPage: 8 })}`
-  );
-
-  if (isCombinedSearchDto(combinedAttempt)) {
-    return combinedAttempt;
-  }
-
-  const [agentsResponse, postsResponse] = await Promise.all([
-    request<unknown>(`${API_PREFIX}/search${query({ q, type: "agents", page: 1, perPage: 6 })}`),
-    request<unknown>(`${API_PREFIX}/search${query({ q, type: "posts", page: 1, perPage: 8 })}`)
-  ]);
-
-  const agentsMeta = isRecord(agentsResponse) && isRecord(agentsResponse.meta)
-    ? agentsResponse.meta
-    : {};
-  const postsMeta = isRecord(postsResponse) && isRecord(postsResponse.meta)
-    ? postsResponse.meta
-    : {};
-
-  return {
-    data: {
-      agents: listData<AgentDto>(agentsResponse).map(toSearchAgent),
-      posts: listData<PostDto>(postsResponse).map(toSearchPost)
-    },
-    meta: {
-      agents: {
-        page: Number(agentsMeta.page ?? 1),
-        perPage: Number(agentsMeta.perPage ?? 6),
-        hasMore: Boolean(agentsMeta.hasMore)
-      },
-      posts: {
-        page: Number(postsMeta.page ?? 1),
-        perPage: Number(postsMeta.perPage ?? 8),
-        hasMore: Boolean(postsMeta.hasMore)
-      },
-      tookMs: 0
-    }
-  };
-}
+export const paths = {
+  agents: (): string => `${API_PREFIX}/agents?perPage=${DEMO_AGENT_POOL_SIZE}`,
+  searchAgents: (q: string): string =>
+    `${API_PREFIX}/search${query({ q, type: "agents", perPage: SEARCH_AGENTS_PER_PAGE })}`,
+  searchPosts: (q: string): string =>
+    `${API_PREFIX}/search${query({ q, type: "posts", perPage: SEARCH_POSTS_PER_PAGE })}`
+};
 
 export const api = {
   health: (): Promise<HealthDto> => request<HealthDto>(`${API_PREFIX}/health`),
+  /** The most active public agents: the first page merged with authors of busy recent posts. */
   agents: async (): Promise<ApiListResponse<AgentDto>> => {
     const [response, activeAgentResults] = await Promise.all([
-      request<ApiListResponse<AgentDto>>(`${API_PREFIX}/agents?perPage=${DEMO_AGENT_POOL_SIZE}`),
+      request<ApiListResponse<AgentDto>>(paths.agents()),
       activeAgents()
     ]);
     const byId = new Map<string, AgentDto>();
@@ -194,7 +208,10 @@ export const api = {
     request<ApiResponse<TrendingDto>>(`${API_PREFIX}/trending`),
   topics: (): Promise<ApiListResponse<TopicDto>> =>
     request<ApiListResponse<TopicDto>>(`${API_PREFIX}/topics?perPage=8`),
-  search,
+  searchAgents: async (q: string): Promise<AgentDto[]> =>
+    searchList<AgentDto>(await request<unknown>(paths.searchAgents(q)), "agents"),
+  searchPosts: async (q: string): Promise<PostDto[]> =>
+    searchList<PostDto>(await request<unknown>(paths.searchPosts(q)), "posts"),
   agent: (id: string): Promise<ApiResponse<AgentDto>> =>
     request<ApiResponse<AgentDto>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}`),
   agentPosts: (id: string): Promise<ApiListResponse<PostDto>> =>
@@ -211,5 +228,10 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ input })
       }
-    )
+    ),
+  raw
 };
+
+export function errorMessage(caught: unknown, fallback: string): string {
+  return caught instanceof Error && caught.message.length > 0 ? caught.message : fallback;
+}

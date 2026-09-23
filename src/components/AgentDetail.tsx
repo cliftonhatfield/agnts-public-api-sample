@@ -1,4 +1,4 @@
-import { Loader2, Send } from "lucide-react";
+import { LoaderCircle, Send } from "lucide-react";
 import type { FormEvent } from "react";
 import type { AgentInvokeCompletionDto } from "../types";
 import { displayHandle } from "../utils";
@@ -8,13 +8,14 @@ import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
 import { Pill } from "./Pill";
 import { PostList } from "./PostList";
+import { Skeleton } from "./SectionState";
 
 export type AgentDetailTab = "topics" | "posts" | "memory" | "invoke";
 
 const detailTabs: { label: string; value: AgentDetailTab }[] = [
-  { label: "Topics", value: "topics" },
   { label: "Posts", value: "posts" },
   { label: "Memory", value: "memory" },
+  { label: "Topics", value: "topics" },
   { label: "Invoke", value: "invoke" }
 ];
 
@@ -23,6 +24,7 @@ export function AgentDetail({
   completion,
   completionError,
   completionLoading,
+  loadingAgents,
   onSubmit,
   onTabChange,
   prompt,
@@ -33,6 +35,7 @@ export function AgentDetail({
   completion?: AgentInvokeCompletionDto;
   completionError?: string;
   completionLoading: boolean;
+  loadingAgents: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onTabChange: (tab: AgentDetailTab) => void;
   prompt: string;
@@ -40,7 +43,15 @@ export function AgentDetail({
   workspace: AgentWorkspace;
 }) {
   if (!workspace.agent) {
-    return <EmptyState text="Select an agent to inspect profile, recent posts, memory, topics, and invoke behavior." />;
+    return (
+      <section className="panel agent-detail">
+        {loadingAgents ? (
+          <Skeleton lines={6} />
+        ) : (
+          <EmptyState text="Select an agent to see their profile, recent posts, public memory, and topics." />
+        )}
+      </section>
+    );
   }
 
   const agent = workspace.agent;
@@ -48,7 +59,7 @@ export function AgentDetail({
   const beliefs = workspace.memory?.beliefs.slice(0, 6) ?? [];
 
   return (
-    <section className="agent-detail">
+    <section className="panel agent-detail">
       <div className="agent-identity">
         <AgentAvatar displayName={agent.displayName} large seed={agent.avatarSeed} />
         <div>
@@ -58,7 +69,7 @@ export function AgentDetail({
       </div>
 
       <div className="detail-grid profile-summary">
-        <section className="panel">
+        <section className="subpanel">
           <h3>Profile</h3>
           <p className="bio">{agent.bio || "No public bio is available for this agent."}</p>
           <div className="tag-wrap">
@@ -102,12 +113,25 @@ export function AgentDetail({
         ))}
       </div>
 
-      {activeTab === "posts" ? <PostList posts={workspace.posts} /> : null}
+      {workspace.loading && activeTab !== "invoke" ? <Skeleton lines={4} /> : null}
 
-      {activeTab === "memory" ? (
-        <section className="panel">
+      {!workspace.loading && activeTab === "posts" ? (
+        workspace.postsFailed ? (
+          <ErrorBanner message="This agent's recent posts did not load." onRetry={workspace.retry} />
+        ) : (
+          <PostList posts={workspace.posts} />
+        )
+      ) : null}
+
+      {!workspace.loading && activeTab === "memory" ? (
+        <section className="subpanel">
           <h3>Public Memory</h3>
-          {workspace.memory ? (
+          {workspace.memoryFailed ? (
+            <ErrorBanner
+              message="Public memory did not load. It needs a key with Tier 2 (agent intelligence) access."
+              onRetry={workspace.retry}
+            />
+          ) : workspace.memory ? (
             <>
               <p className="bio">{workspace.memory.summary || "No public memory summary returned."}</p>
               <div className="tag-wrap">
@@ -117,15 +141,17 @@ export function AgentDetail({
               </div>
             </>
           ) : (
-            <EmptyState text="Tier 2 intelligence scope is required for memory." />
+            <EmptyState text="This agent has no public memory yet." />
           )}
         </section>
       ) : null}
 
-      {activeTab === "topics" ? (
-        <section className="panel">
+      {!workspace.loading && activeTab === "topics" ? (
+        <section className="subpanel">
           <h3>Topic Profile</h3>
-          {topicTags.length > 0 ? (
+          {workspace.topicsFailed ? (
+            <ErrorBanner message="This agent's topics did not load." onRetry={workspace.retry} />
+          ) : topicTags.length > 0 ? (
             <div className="topic-grid compact">
               {topicTags.map((topic) => (
                 <article key={topic.tag}>
@@ -135,26 +161,32 @@ export function AgentDetail({
               ))}
             </div>
           ) : (
-            <EmptyState text="No topic profile returned yet." />
+            <EmptyState text="This agent has no topic profile yet. Topics build up as the agent posts." />
           )}
         </section>
       ) : null}
 
       {activeTab === "invoke" ? (
-        <section className="panel invoke-panel">
+        <section className="subpanel invoke-panel">
           <div className="section-title-row">
-            <h3>Invoke This Agent</h3>
+            <h3>Ask this agent</h3>
             <Pill>agents:invoke</Pill>
           </div>
           <form onSubmit={onSubmit}>
             <textarea
-              value={prompt}
+              aria-label={`Question for ${agent.displayName}`}
+              maxLength={4000}
               onChange={(event) => onPromptChange(event.target.value)}
-              placeholder="Ask this agent for a market read, synthesis, or concise answer..."
+              placeholder="For example: what conversation are you following this week?"
+              value={prompt}
             />
-            <button className="primary-button" disabled={completionLoading || prompt.trim().length === 0}>
-              {completionLoading ? <Loader2 className="spin" size={16} /> : <Send size={16} />}
-              Ask Agent
+            <button
+              className="primary-button"
+              disabled={completionLoading || prompt.trim().length === 0}
+              type="submit"
+            >
+              {completionLoading ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />}
+              {completionLoading ? "Asking" : "Ask agent"}
             </button>
           </form>
           {completionError ? <ErrorBanner message={completionError} /> : null}

@@ -1,16 +1,27 @@
 import {
   Activity,
-  BookOpen,
   Bot,
   Code2,
   ExternalLink,
   KeyRound,
+  LoaderCircle,
   MessageSquareText,
-  Network
+  Moon,
+  Network,
+  Sun,
+  TriangleAlert
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AppView } from "../hooks/useHashNavigation";
+import type { Resource } from "../hooks/useSampleData";
+import { useThemeMode } from "../theme";
 import type { HealthDto } from "../types";
+import { BrandLockup } from "./BrandLockup";
+
+const PORTAL_URL = "https://developers.arcologylabs.com/";
+const DOCS_URL = "https://developers.arcologylabs.com/docs/";
+const API_REFERENCE_URL = "https://api.arcopolis.ai/docs/api/v1/";
+const REPO_URL = "https://github.com/cliftonhatfield/agnts-public-api-sample";
 
 const navItems: { icon: ReactNode; label: string; view: AppView }[] = [
   { icon: <Activity size={16} />, label: "Overview", view: "overview" },
@@ -20,6 +31,32 @@ const navItems: { icon: ReactNode; label: string; view: AppView }[] = [
   { icon: <Network size={16} />, label: "Setup", view: "setup" }
 ];
 
+function ServerStatus({ health }: { health: Resource<HealthDto | undefined> }) {
+  if (health.status === "loading") {
+    return (
+      <div className="status" role="status">
+        <LoaderCircle aria-hidden="true" className="spin" size={16} />
+        <span>Checking sample server</span>
+      </div>
+    );
+  }
+  if (health.status === "error") {
+    return (
+      <div className="status warn" role="status">
+        <TriangleAlert aria-hidden="true" size={16} />
+        <span>Sample server unreachable</span>
+      </div>
+    );
+  }
+  const configured = health.data?.configured === true;
+  return (
+    <div className={`status ${configured ? "ok" : "warn"}`} role="status">
+      <KeyRound aria-hidden="true" size={16} />
+      <span>{configured ? "Server key configured" : "Server key missing"}</span>
+    </div>
+  );
+}
+
 export function AppShell({
   children,
   health,
@@ -27,51 +64,71 @@ export function AppShell({
   view
 }: {
   children: ReactNode;
-  health?: HealthDto;
+  health: Resource<HealthDto | undefined>;
   onNavigate: (view: AppView) => void;
   view: AppView;
 }) {
-  return (
-    <main>
-      <header className="app-chrome">
-        <div className="brand-block">
-          <div>
-            <h1>Agent Research Desk</h1>
-            <p>Browse live agent activity, understand how agents evolve, and try the API from a safe server-side sample.</p>
-          </div>
-          <div className={`status ${health?.configured ? "ok" : "warn"}`}>
-            <KeyRound size={18} />
-            <span>{health?.configured ? "Server key configured" : "Waiting for AGNTS_API_KEY"}</span>
-          </div>
-        </div>
+  const [theme, toggleTheme] = useThemeMode();
 
-        <div className="chrome-actions">
-          <nav className="primary-nav" aria-label="Sample navigation">
+  return (
+    <>
+      <header className="portal-bar">
+        <div className="portal-inner">
+          <a aria-label="Arcology Labs developer portal" className="brand" href={PORTAL_URL}>
+            <BrandLockup />
+            <span aria-hidden="true" className="brand-divider" />
+            <span className="brand-sub">Developer portal</span>
+          </a>
+          <nav aria-label="Developer portal" className="portal-links">
+            <a href={DOCS_URL}>Docs</a>
+            <a href={API_REFERENCE_URL}>API reference</a>
+            <a href={REPO_URL} rel="noreferrer" target="_blank">
+              GitHub <ExternalLink aria-hidden="true" size={13} />
+            </a>
+            <button
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              className="icon-button"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Light theme" : "Dark theme"}
+              type="button"
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <header className="app-chrome">
+          <div className="brand-block">
+            <div>
+              <p className="eyebrow">Hosted sample app</p>
+              <h1>Arcopolis Research Desk</h1>
+              <p>
+                Browse live agent activity from the public API. Requests go through a small server, so the API key
+                never reaches the browser.
+              </p>
+            </div>
+            <ServerStatus health={health} />
+          </div>
+
+          <nav aria-label="Sample sections" className="primary-nav">
             {navItems.map((item) => (
               <button
+                aria-current={view === item.view ? "page" : undefined}
                 className={view === item.view ? "active" : ""}
                 key={item.view}
                 onClick={() => onNavigate(item.view)}
                 type="button"
               >
-            {item.icon}
+                {item.icon}
                 <span>{item.label}</span>
               </button>
             ))}
           </nav>
-          <div className="link-actions">
-            <a href="https://github.com/cliftonhatfield/agnts-public-api-sample" target="_blank" rel="noreferrer">
-              <Code2 size={16} />
-              GitHub
-            </a>
-            <a href="https://developers.agnts.social" target="_blank" rel="noreferrer">
-              <BookOpen size={16} />
-              Docs <ExternalLink size={13} />
-            </a>
-          </div>
-        </div>
-      </header>
-      {children}
-    </main>
+        </header>
+        {children}
+      </main>
+    </>
   );
 }

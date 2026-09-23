@@ -1,48 +1,57 @@
-import { Search } from "lucide-react";
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
-import { api } from "../api";
+import { useMemo, useRef, useState } from "react";
+import { api, errorMessage } from "../api";
 import { AgentDetail, type AgentDetailTab } from "../components/AgentDetail";
 import { AgentRow } from "../components/AgentRow";
 import { EmptyState } from "../components/EmptyState";
-import { ErrorBanner } from "../components/ErrorBanner";
+import { SectionState } from "../components/SectionState";
 import type { AgentWorkspace } from "../hooks/useAgentWorkspace";
-import type { DashboardData } from "../hooks/useSampleData";
+import type { Resource } from "../hooks/useSampleData";
 import type { AgentDto, AgentInvokeCompletionDto } from "../types";
 
+/** Matches the breakpoint where the directory stacks above the detail panel. */
+const STACKED_LAYOUT_QUERY = "(max-width: 1120px)";
+
 export function AgentsPage({
-  dashboard,
+  agents,
+  onRetry,
   onSelectAgent,
   selectedAgentId,
   workspace
 }: {
-  dashboard: DashboardData;
+  agents: Resource<AgentDto[]>;
+  onRetry: () => void;
   onSelectAgent: (agent: AgentDto) => void;
   selectedAgentId?: string;
   workspace: AgentWorkspace;
 }) {
   const [agentFilter, setAgentFilter] = useState("");
-  const [detailTab, setDetailTab] = useState<AgentDetailTab>("topics");
+  const [detailTab, setDetailTab] = useState<AgentDetailTab>("posts");
   const [invokePrompt, setInvokePrompt] = useState("");
   const [completion, setCompletion] = useState<AgentInvokeCompletionDto>();
   const [completionError, setCompletionError] = useState<string>();
   const [completionLoading, setCompletionLoading] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const filteredAgents = useMemo(() => {
     const query = agentFilter.trim().toLowerCase();
-    if (query.length === 0) return dashboard.agents;
-    return dashboard.agents.filter((agent) =>
+    if (query.length === 0) return agents.data;
+    return agents.data.filter((agent) =>
       [agent.displayName, agent.handle, agent.bio, ...agent.interests]
         .join(" ")
         .toLowerCase()
         .includes(query)
     );
-  }, [agentFilter, dashboard.agents]);
+  }, [agentFilter, agents.data]);
 
   function selectAgent(agent: AgentDto): void {
     setCompletion(undefined);
     setCompletionError(undefined);
     onSelectAgent(agent);
+    // On a stacked layout the detail sits below the list; bring it into view.
+    if (window.matchMedia(STACKED_LAYOUT_QUERY).matches) {
+      requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   }
 
   async function handleInvoke(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -56,7 +65,7 @@ export function AgentsPage({
       const response = await api.complete(workspace.agent.id, invokePrompt.trim());
       setCompletion(response.data);
     } catch (caught) {
-      setCompletionError(caught instanceof Error ? caught.message : "Agent invocation failed.");
+      setCompletionError(errorMessage(caught, "Agent invocation failed."));
     } finally {
       setCompletionLoading(false);
     }
@@ -64,39 +73,44 @@ export function AgentsPage({
 
   return (
     <div className="agents-layout">
-      <aside className="agent-directory">
+      <aside aria-label="Agent directory" className="panel agent-directory">
         <div className="section-title-row">
-          <h2>Agents</h2>
-          <Search size={18} />
+          <h2>Most active agents</h2>
         </div>
         <input
-          value={agentFilter}
+          aria-label="Filter agents"
           onChange={(event) => setAgentFilter(event.target.value)}
-          placeholder="Filter agents"
+          placeholder="Filter by name, handle, or interest"
+          type="search"
+          value={agentFilter}
         />
-        <div className="agent-list">
-          {filteredAgents.length === 0 ? (
-            <EmptyState text="No agents match this filter." />
-          ) : (
-            filteredAgents.map((agent) => (
-              <AgentRow
-                key={agent.id}
-                agent={agent}
-                selected={agent.id === selectedAgentId}
-                onSelect={selectAgent}
-              />
-            ))
+        <SectionState lines={5} onRetry={onRetry} resource={agents}>
+          {() => (
+            <div className="agent-list">
+              {filteredAgents.length === 0 ? (
+                <EmptyState text="No agents match this filter." />
+              ) : (
+                filteredAgents.map((agent) => (
+                  <AgentRow
+                    key={agent.id}
+                    agent={agent}
+                    selected={agent.id === selectedAgentId}
+                    onSelect={selectAgent}
+                  />
+                ))
+              )}
+            </div>
           )}
-        </div>
+        </SectionState>
       </aside>
 
-      <div className="agent-focus">
-        {completionError ? <ErrorBanner message={completionError} /> : null}
+      <div className="agent-focus" ref={detailRef}>
         <AgentDetail
           activeTab={detailTab}
           completion={completion}
           completionError={completionError}
           completionLoading={completionLoading}
+          loadingAgents={agents.status === "loading"}
           onSubmit={handleInvoke}
           onTabChange={setDetailTab}
           prompt={invokePrompt}
