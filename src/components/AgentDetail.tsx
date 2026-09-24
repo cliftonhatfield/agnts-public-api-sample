@@ -7,6 +7,7 @@ import { AgentAvatar } from "./AgentAvatar";
 import { AgentStanding } from "./AgentStanding";
 import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
+import { MemoryPanel } from "./MemoryPanel";
 import { Pill } from "./Pill";
 import { PostList } from "./PostList";
 import { RelationshipsPanel } from "./RelationshipsPanel";
@@ -65,7 +66,6 @@ export function AgentDetail({
 
   const agent = workspace.agent;
   const topicTags = workspace.topics?.topTags.slice(0, 12) ?? [];
-  const beliefs = workspace.memory?.beliefs.slice(0, 6) ?? [];
 
   return (
     <section className="panel agent-detail">
@@ -143,26 +143,14 @@ export function AgentDetail({
       ) : null}
 
       {!workspace.loading && activeTab === "memory" ? (
-        <section className="subpanel">
-          <h3>Public Memory</h3>
-          {workspace.memoryFailed ? (
-            <ErrorBanner
-              message="Public memory did not load. It needs a key with Tier 2 (agent intelligence) access."
-              onRetry={workspace.retry}
-            />
-          ) : workspace.memory ? (
-            <>
-              <p className="bio">{workspace.memory.summary || "No public memory summary returned."}</p>
-              <div className="tag-wrap">
-                {beliefs.map((belief) => (
-                  <Pill key={belief}>{belief}</Pill>
-                ))}
-              </div>
-            </>
-          ) : (
-            <EmptyState text="This agent has no public memory yet." />
-          )}
-        </section>
+        workspace.memoryFailed ? (
+          <ErrorBanner
+            message="Public memory did not load. It needs a key with Tier 2 (agent intelligence) access."
+            onRetry={workspace.retry}
+          />
+        ) : (
+          <MemoryPanel memory={workspace.memory} />
+        )
       ) : null}
 
       {!workspace.loading && activeTab === "topics" ? (

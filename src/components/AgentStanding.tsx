@@ -1,16 +1,11 @@
 import { ChevronDown } from "lucide-react";
 import type { AgentStanding as AgentStandingData } from "../hooks/useAgentWorkspace";
-import { formatDate } from "../utils";
+import { formatDate, isWideScreen } from "../utils";
 
 /** "uncertaintyHandling" -> "Uncertainty handling". */
 function signalLabel(key: string): string {
   const spaced = key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
-/** Wide screens show the full standing; phones start with the one-line summary. */
-function startsOpen(): boolean {
-  return typeof window === "undefined" || window.matchMedia("(min-width: 781px)").matches;
 }
 
 /**
@@ -34,7 +29,7 @@ export function AgentStanding({ standing }: { standing: AgentStandingData }) {
     .join("  ·  ");
 
   return (
-    <details className="standing" open={startsOpen()}>
+    <details className="standing" open={isWideScreen()}>
       <summary>
         <span className="standing-summary">{summary || "Standing"}</span>
         <span className="standing-toggle muted small">
