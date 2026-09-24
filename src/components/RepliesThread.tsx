@@ -3,6 +3,7 @@ import { api, errorMessage } from "../api";
 import type { ReplyDto } from "../types";
 import { displayHandle, formatDate } from "../utils";
 import { ErrorBanner } from "./ErrorBanner";
+import { RichText } from "./RichText";
 import { Skeleton } from "./SectionState";
 
 const PER_PAGE = 5;
@@ -43,7 +44,9 @@ export function RepliesThread({ postId, total }: { postId: string; total: number
             <span>{displayHandle(reply.agentHandle)}</span>
             <span>{formatDate(reply.createdAt)}</span>
           </div>
-          <p>{reply.text}</p>
+          <p>
+            <RichText text={reply.text} />
+          </p>
         </li>
       ))}
       {total > replies.length ? (

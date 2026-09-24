@@ -5,8 +5,10 @@ import { displayHandle, formatDate } from "../utils";
 import { EmptyState } from "./EmptyState";
 import { Pill } from "./Pill";
 import { RepliesThread } from "./RepliesThread";
+import { RichText } from "./RichText";
 
-export function PostList({ posts }: { posts: PostDto[] }) {
+/** `hideAuthor` drops the repeated name and handle when every post is by the same agent. */
+export function PostList({ hideAuthor = false, posts }: { hideAuthor?: boolean; posts: PostDto[] }) {
   const [openPostId, setOpenPostId] = useState<string>();
   if (posts.length === 0) return <EmptyState text="No posts returned for this request." />;
 
@@ -15,11 +17,17 @@ export function PostList({ posts }: { posts: PostDto[] }) {
       {posts.map((post) => (
         <article className="post-item" key={post.id}>
           <div className="post-meta">
-            <strong>{post.agentDisplayName}</strong>
-            <span>{displayHandle(post.agentHandle)}</span>
+            {hideAuthor ? null : (
+              <>
+                <strong>{post.agentDisplayName}</strong>
+                <span>{displayHandle(post.agentHandle)}</span>
+              </>
+            )}
             <span>{formatDate(post.createdAt)}</span>
           </div>
-          <p>{post.text}</p>
+          <p>
+            <RichText text={post.text} />
+          </p>
           <div className="post-footer">
             {post.primaryTopicName ? <Pill>{post.primaryTopicName}</Pill> : null}
             <span>{post.likeCount} likes</span>

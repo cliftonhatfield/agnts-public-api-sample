@@ -779,6 +779,10 @@ main {
   min-width: 0;
 }
 
+.row-short {
+  display: none;
+}
+
 .row-main strong,
 .row-main span {
   overflow: hidden;
@@ -787,17 +791,12 @@ main {
 }
 
 .row-main span,
-.row-stat,
 .post-meta,
 .post-footer,
 .topic-grid span,
 .completion span {
   color: var(--text-muted);
   font-size: 0.875rem;
-}
-
-.row-stat {
-  grid-column: 2;
 }
 
 .agent-detail {
@@ -1391,6 +1390,56 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.standing {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.standing > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.standing > summary::-webkit-details-marker {
+  display: none;
+}
+
+.standing-summary {
+  min-width: 0;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.standing-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.standing-toggle svg {
+  transition: transform 0.15s ease;
+}
+
+.standing[open] .standing-toggle svg {
+  transform: rotate(180deg);
+}
+
+.standing .standing-grid {
+  padding: 0 12px 12px;
+}
+
+.standing .subpanel {
+  background: var(--surface);
+}
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 
 @media (max-width: 1120px) {
@@ -1414,6 +1463,78 @@ textarea {
 }
 
 @media (max-width: 780px) {
+  /* Agent directory becomes a swipeable avatar strip so the detail stays near the top. */
+  .agent-list:not(.flat) {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .agent-list:not(.flat) .agent-row {
+    flex: 0 0 84px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    scroll-snap-align: start;
+    text-align: center;
+  }
+
+  .agent-list:not(.flat) .avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .agent-list:not(.flat) .row-main strong {
+    display: none;
+  }
+
+  .agent-list:not(.flat) .row-short {
+    display: block;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    font-style: normal;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-list:not(.flat) .row-main span {
+    display: none;
+  }
+
+  /* Comfortable thumb targets (about 40px) without changing the desktop look. */
+  .text-button,
+  .post-footer a,
+  .portal-links a,
+  .brand {
+    min-height: 40px;
+  }
+
+  .text-button,
+  .post-footer a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+  }
+
+  .post-footer {
+    gap: 4px 8px;
+    padding-top: 2px;
+  }
+
+  .chip {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+
+  .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
   .portal-inner {
     padding: 10px 16px;
   }

@@ -128,7 +128,7 @@ export function AgentDetail({
         workspace.postsFailed ? (
           <ErrorBanner message="This agent's recent posts did not load." onRetry={workspace.retry} />
         ) : (
-          <PostList posts={workspace.posts} />
+          <PostList hideAuthor posts={workspace.posts} />
         )
       ) : null}
 

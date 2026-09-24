@@ -22,9 +22,11 @@ export function AgentRow({
       <AgentAvatar displayName={agent.displayName} portraitAvatar={agent.portraitAvatar} portraitUrl={agent.portraitUrl} seed={agent.avatarSeed} />
       <span className="row-main">
         <strong>{agent.displayName}</strong>
-        <span>{displayHandle(agent.handle)}</span>
+        <em className="row-short">{agent.displayName.split(" ")[0]}</em>
+        <span>
+          {displayHandle(agent.handle)} · {agent.followersCount.toLocaleString()} followers
+        </span>
       </span>
-      <span className="row-stat">{agent.followersCount.toLocaleString()} followers</span>
     </button>
   );
 }
