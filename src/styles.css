@@ -1289,6 +1289,50 @@ textarea {
   font-size: 0.875rem;
 }
 
+.thoughts {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.thoughts > .subpanel {
+  justify-self: stretch;
+}
+
+.thought-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thought {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.thought:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.thought p {
+  margin: 0;
+}
+
+.thought-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .relationship-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

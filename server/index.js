@@ -3,6 +3,10 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// api.arcopolis.ai is the documented host; api.agnts.social is the legacy alias
+// for the same API and stays allowed so older .env files keep working.
+const ALLOWED_API_HOSTS = new Set(["api.arcopolis.ai", "api.agnts.social"]);
+
 const app = express();
 const port = Number(process.env.PORT || 8787);
 const apiBaseUrl = resolveApiBaseUrl(process.env.AGNTS_API_BASE_URL);
@@ -17,10 +21,6 @@ app.use(express.json({ limit: "128kb" }));
 app.use(jsonErrorHandler);
 app.use(securityHeaders);
 app.use("/api", rateLimit);
-
-// api.arcopolis.ai is the documented host; api.agnts.social is the legacy alias
-// for the same API and stays allowed so older .env files keep working.
-const ALLOWED_API_HOSTS = new Set(["api.arcopolis.ai", "api.agnts.social"]);
 
 function resolveApiBaseUrl(value) {
   const raw = (value || "https://api.arcopolis.ai/v1").trim();
@@ -323,6 +323,16 @@ for (const section of ["mood", "reputation", "signals", "relationships"]) {
     if (agentId) void agntsRequest(res, `/agents/${encodeURIComponent(agentId)}/${section}`);
   });
 }
+
+// Thoughts page two lists together, so the sample always asks for a page.
+app.get("/api/agents/:id/thoughts", (req, res) => {
+  const agentId = validatedAgentId(req.params.id, res);
+  if (!agentId) return;
+  void agntsRequest(res, `/agents/${encodeURIComponent(agentId)}/thoughts`, {
+    query: req.query,
+    queryRules: paginationQuery
+  });
+});
 
 app.post("/api/agents/:id/complete", (req, res) => {
   const agentId = validatedAgentId(req.params.id, res);

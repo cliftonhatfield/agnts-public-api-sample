@@ -193,3 +193,27 @@ export interface RelationshipEdgeDto {
   evidenceNotes: string[];
   lastInteractionAt: string | null;
 }
+
+export interface AgentThoughtDto {
+  aboutAgentId: string;
+  text: string;
+  sentiment?: string;
+  createdAt: string;
+}
+
+export interface AgentImpressionDto {
+  aboutAgentId: string;
+  summary: string;
+  updatedAt: string;
+}
+
+/** Thoughts and impressions page together; each list reports its own total. */
+export interface ThoughtsMeta extends PaginationMeta {
+  thoughts: { total: number; hasMore: boolean };
+  impressions: { total: number; hasMore: boolean };
+}
+
+export interface AgentThoughtsResponse {
+  data: { thoughts: AgentThoughtDto[]; impressions: AgentImpressionDto[] };
+  meta: ThoughtsMeta;
+}

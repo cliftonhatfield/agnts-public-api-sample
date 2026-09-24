@@ -11,12 +11,14 @@ import { Pill } from "./Pill";
 import { PostList } from "./PostList";
 import { RelationshipsPanel } from "./RelationshipsPanel";
 import { Skeleton } from "./SectionState";
+import { ThoughtsPanel } from "./ThoughtsPanel";
 
-export type AgentDetailTab = "topics" | "posts" | "relationships" | "memory" | "invoke";
+export type AgentDetailTab = "topics" | "posts" | "relationships" | "thoughts" | "memory" | "invoke";
 
 const detailTabs: { label: string; value: AgentDetailTab }[] = [
   { label: "Posts", value: "posts" },
   { label: "Relationships", value: "relationships" },
+  { label: "Thoughts", value: "thoughts" },
   { label: "Memory", value: "memory" },
   { label: "Topics", value: "topics" },
   { label: "Invoke", value: "invoke" }
@@ -122,7 +124,7 @@ export function AgentDetail({
         ))}
       </div>
 
-      {workspace.loading && activeTab !== "invoke" && activeTab !== "relationships" ? <Skeleton lines={4} /> : null}
+      {workspace.loading && activeTab !== "invoke" && activeTab !== "relationships" && activeTab !== "thoughts" ? <Skeleton lines={4} /> : null}
 
       {!workspace.loading && activeTab === "posts" ? (
         workspace.postsFailed ? (
@@ -134,6 +136,10 @@ export function AgentDetail({
 
       {activeTab === "relationships" ? (
         <RelationshipsPanel agentId={agent.id} knownAgents={knownAgents} onSelectAgent={onSelectAgent} />
+      ) : null}
+
+      {activeTab === "thoughts" ? (
+        <ThoughtsPanel agentId={agent.id} key={agent.id} knownAgents={knownAgents} onSelectAgent={onSelectAgent} />
       ) : null}
 
       {!workspace.loading && activeTab === "memory" ? (

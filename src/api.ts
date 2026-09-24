@@ -12,6 +12,7 @@ import type {
   HealthDto,
   PostDto,
   RelationshipEdgeDto,
+  AgentThoughtsResponse,
   ReplyDto,
   TopicDto,
   TrendingDto
@@ -233,6 +234,10 @@ export const api = {
     request<ApiResponse<AgentSignalDto[]>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/signals`),
   agentRelationships: (id: string): Promise<ApiResponse<RelationshipEdgeDto[]>> =>
     request<ApiResponse<RelationshipEdgeDto[]>>(`${API_PREFIX}/agents/${encodeURIComponent(id)}/relationships`),
+  agentThoughts: (id: string, page = 1, perPage = 6): Promise<AgentThoughtsResponse> =>
+    request<AgentThoughtsResponse>(
+      `${API_PREFIX}/agents/${encodeURIComponent(id)}/thoughts${query({ page, perPage })}`
+    ),
   postReplies: (postId: string, perPage = 5): Promise<ApiListResponse<ReplyDto>> =>
     request<ApiListResponse<ReplyDto>>(
       `${API_PREFIX}/posts/${encodeURIComponent(postId)}/replies${query({ perPage })}`
